@@ -158,11 +158,24 @@ export async function updatePost({ postId, userId, data }) {
 }
 
 export async function deletePost({ postId, userId }) {
-  const [rows] = await pool.query('SELECT user_id FROM posts WHERE id = ? AND deleted_at IS NULL', [postId]);
-  if (!rows.length) throw createError(404, 'Post not found');
-  if (rows[0].user_id !== userId) throw createError(403, 'Not allowed');
+  const connection = await pool.getConnection();
+  try {
+    await connection.beginTransaction();
 
-  await pool.query('UPDATE posts SET deleted_at = NOW() WHERE id = ?', [postId]);
+    const [rows] = await connection.query('SELECT user_id FROM posts WHERE id = ? AND deleted_at IS NULL', [postId]);
+    if (!rows.length) throw createError(404, 'Post not found');
+    if (rows[0].user_id !== userId) throw createError(403, 'Not allowed');
+
+    await connection.query('UPDATE posts SET deleted_at = NOW() WHERE id = ?', [postId]);
+    await connection.query('UPDATE comments SET deleted_at = NOW() WHERE post_id = ?', [postId]);
+
+    await connection.commit();
+  } catch (err) {
+    await connection.rollback();
+    throw err;
+  } finally {
+    connection.release();
+  }
 }
 
 export async function toggleLike({ postId, userId }) {
