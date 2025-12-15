@@ -16,6 +16,7 @@ router.post(
   validate(commentsController.validators.create),
   asyncHandler(commentsController.createForPost)
 );
+router.post('/:postId/likes/toggle', auth(true), asyncHandler(postsController.toggleLike));
 router.post('/', auth(true), validate(postsController.validators.create), asyncHandler(postsController.create));
 router.patch('/:postId', auth(true), validate(postsController.validators.update), asyncHandler(postsController.update));
 router.delete('/:postId', auth(true), asyncHandler(postsController.remove));

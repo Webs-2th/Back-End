@@ -68,3 +68,8 @@ export async function remove(req, res) {
   await postsService.deletePost({ postId: req.params.postId, userId: req.user.id });
   res.status(204).send();
 }
+
+export async function toggleLike(req, res) {
+  const result = await postsService.toggleLike({ postId: req.params.postId, userId: req.user.id });
+  res.json(result);
+}

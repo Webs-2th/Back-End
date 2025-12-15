@@ -242,6 +242,28 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Comment'
+  /posts/{postId}/likes/toggle:
+    post:
+      tags: [Posts]
+      summary: Toggle like on a post
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/PostId'
+      responses:
+        '200':
+          description: Current like status after toggle
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  liked:
+                    type: boolean
+                  likesCount:
+                    type: integer
+        '404':
+          description: Post not found
   /comments/{commentId}:
     patch:
       tags: [Comments]
@@ -468,6 +490,10 @@ components:
           type: array
           items:
             type: string
+        comment_count:
+          type: integer
+        likes_count:
+          type: integer
     PostInput:
       type: object
       required: [title, body]

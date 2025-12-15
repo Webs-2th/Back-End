@@ -18,7 +18,7 @@
 3. 환경 변수 파일을 준비합니다. 저장소의 `.env` 예시를 복사하거나 새로 만들어 아래 값을 채웁니다.
    - `PORT`, `MYSQL_HOST`, `MYSQL_PORT`, `MYSQL_USER`, `MYSQL_PASSWORD`, `MYSQL_DATABASE`
    - `JWT_SECRET`, `JWT_EXPIRES_IN`, `EMAIL_FROM`, `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`
-   - `APP_BASE_URL`, `UPLOAD_BASE_URL`
+   - `APP_BASE_URL`, `UPLOAD_BASE_URL`, `UPLOADS_DIR`(선택)
 4. `sql/schema.sql`을 로컬 데이터베이스에 실행해 기본 스키마를 생성합니다.
 
 ## 서버 실행 방법
@@ -56,3 +56,8 @@ APP_BASE_URL=http://localhost:4000
 UPLOAD_BASE_URL=https://cdn.example.com
 ```
 > DB 연결 시 `MYSQL_*` 값이 실제 로컬/운영 DB 설정과 일치해야 하며, 암호·비밀키는 안전한 값으로 교체하세요.
+
+## 이미지 업로드 동작
+- 서버는 시작 시 `uploads/` 디렉터리를 자동 생성하고 `/uploads` 경로로 정적 서비스합니다.
+- 업로드 API(`/api/v1/uploads/images`)는 파일을 로컬 디스크에 저장한 뒤 `http://localhost:4000/uploads/<파일명>` 형태의 URL을 반환합니다(`UPLOAD_BASE_URL` 또는 `APP_BASE_URL`로 덮어쓰기 가능).
+- 저장 경로를 바꾸고 싶다면 `.env`에 `UPLOADS_DIR=/absolute/path/to/uploads`를 지정하세요.

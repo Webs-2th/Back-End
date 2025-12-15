@@ -41,7 +41,8 @@ export async function listPosts({ filters = {}, cursor, limit }) {
            u.nickname, u.profile_image_url,
            JSON_ARRAYAGG(JSON_OBJECT('url', pi.image_url, 'sort', pi.sort_order)) AS images,
            GROUP_CONCAT(DISTINCT t.name) AS tags,
-           (SELECT COUNT(*) FROM comments c WHERE c.post_id = p.id AND c.deleted_at IS NULL) AS comment_count
+           (SELECT COUNT(*) FROM comments c WHERE c.post_id = p.id AND c.deleted_at IS NULL) AS comment_count,
+           (SELECT COUNT(*) FROM post_likes pl WHERE pl.post_id = p.id) AS likes_count
     FROM posts p
       JOIN users u ON u.id = p.user_id
       LEFT JOIN post_images pi ON pi.post_id = p.id
@@ -65,7 +66,8 @@ export async function getPost(postId) {
     `SELECT p.id, p.user_id, p.title, p.body, p.place, p.published_at, p.created_at, p.updated_at,
             u.nickname, u.profile_image_url,
             JSON_ARRAYAGG(JSON_OBJECT('url', pi.image_url, 'sort', pi.sort_order)) AS images,
-            GROUP_CONCAT(DISTINCT t.name) AS tags
+            GROUP_CONCAT(DISTINCT t.name) AS tags,
+            (SELECT COUNT(*) FROM post_likes pl WHERE pl.post_id = p.id) AS likes_count
        FROM posts p
        JOIN users u ON u.id = p.user_id
        LEFT JOIN post_images pi ON pi.post_id = p.id
@@ -161,4 +163,39 @@ export async function deletePost({ postId, userId }) {
   if (rows[0].user_id !== userId) throw createError(403, 'Not allowed');
 
   await pool.query('UPDATE posts SET deleted_at = NOW() WHERE id = ?', [postId]);
+}
+
+export async function toggleLike({ postId, userId }) {
+  const connection = await pool.getConnection();
+  try {
+    await connection.beginTransaction();
+
+    const [postRows] = await connection.query('SELECT id FROM posts WHERE id = ? AND deleted_at IS NULL', [postId]);
+    if (!postRows.length) throw createError(404, 'Post not found');
+
+    let liked = false;
+    try {
+      await connection.query('INSERT INTO post_likes (post_id, user_id, created_at) VALUES (?, ?, NOW())', [
+        postId,
+        userId,
+      ]);
+      liked = true;
+    } catch (err) {
+      if (err.code === 'ER_DUP_ENTRY') {
+        await connection.query('DELETE FROM post_likes WHERE post_id = ? AND user_id = ?', [postId, userId]);
+        liked = false;
+      } else {
+        throw err;
+      }
+    }
+
+    const [countRows] = await connection.query('SELECT COUNT(*) AS cnt FROM post_likes WHERE post_id = ?', [postId]);
+    await connection.commit();
+    return { liked, likesCount: Number(countRows[0].cnt) };
+  } catch (err) {
+    await connection.rollback();
+    throw err;
+  } finally {
+    connection.release();
+  }
 }
